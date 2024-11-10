@@ -3058,6 +3058,107 @@ abstract contract ERC721 is Context, ERC165, IERC721, IERC721Metadata, IERC721Er
     }
 }
 
+// File: @openzeppelin/contracts/interfaces/IERC165.sol
+
+
+// OpenZeppelin Contracts (last updated v5.0.0) (interfaces/IERC165.sol)
+
+pragma solidity ^0.8.20;
+
+
+// File: @openzeppelin/contracts/interfaces/IERC721.sol
+
+
+// OpenZeppelin Contracts (last updated v5.0.0) (interfaces/IERC721.sol)
+
+pragma solidity ^0.8.20;
+
+
+// File: @openzeppelin/contracts/interfaces/IERC4906.sol
+
+
+// OpenZeppelin Contracts (last updated v5.1.0) (interfaces/IERC4906.sol)
+
+pragma solidity ^0.8.20;
+
+
+
+/// @title ERC-721 Metadata Update Extension
+interface IERC4906 is IERC165, IERC721 {
+    /// @dev This event emits when the metadata of a token is changed.
+    /// So that the third-party platforms such as NFT market could
+    /// timely update the images and related attributes of the NFT.
+    event MetadataUpdate(uint256 _tokenId);
+
+    /// @dev This event emits when the metadata of a range of tokens is changed.
+    /// So that the third-party platforms such as NFT market could
+    /// timely update the images and related attributes of the NFTs.
+    event BatchMetadataUpdate(uint256 _fromTokenId, uint256 _toTokenId);
+}
+
+// File: @openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol
+
+
+// OpenZeppelin Contracts (last updated v5.1.0) (token/ERC721/extensions/ERC721URIStorage.sol)
+
+pragma solidity ^0.8.20;
+
+
+
+
+
+/**
+ * @dev ERC-721 token with storage based token URI management.
+ */
+abstract contract ERC721URIStorage is IERC4906, ERC721 {
+    using Strings for uint256;
+
+    // Interface ID as defined in ERC-4906. This does not correspond to a traditional interface ID as ERC-4906 only
+    // defines events and does not include any external function.
+    bytes4 private constant ERC4906_INTERFACE_ID = bytes4(0x49064906);
+
+    // Optional mapping for token URIs
+    mapping(uint256 tokenId => string) private _tokenURIs;
+
+    /**
+     * @dev See {IERC165-supportsInterface}
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, IERC165) returns (bool) {
+        return interfaceId == ERC4906_INTERFACE_ID || super.supportsInterface(interfaceId);
+    }
+
+    /**
+     * @dev See {IERC721Metadata-tokenURI}.
+     */
+    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+        _requireOwned(tokenId);
+
+        string memory _tokenURI = _tokenURIs[tokenId];
+        string memory base = _baseURI();
+
+        // If there is no base URI, return the token URI.
+        if (bytes(base).length == 0) {
+            return _tokenURI;
+        }
+        // If both are set, concatenate the baseURI and tokenURI (via string.concat).
+        if (bytes(_tokenURI).length > 0) {
+            return string.concat(base, _tokenURI);
+        }
+
+        return super.tokenURI(tokenId);
+    }
+
+    /**
+     * @dev Sets `_tokenURI` as the tokenURI of `tokenId`.
+     *
+     * Emits {MetadataUpdate}.
+     */
+    function _setTokenURI(uint256 tokenId, string memory _tokenURI) internal virtual {
+        _tokenURIs[tokenId] = _tokenURI;
+        emit MetadataUpdate(tokenId);
+    }
+}
+
 // File: @openzeppelin/contracts/access/Ownable.sol
 
 
@@ -3168,8 +3269,8 @@ pragma solidity ^0.8.22;
 
 
 
-/// @custom:security-contact test@mail.com
-contract Educateth is ERC721, Ownable {
+
+contract Educateth is ERC721, ERC721URIStorage, Ownable {
     uint256 private _nextTokenId;
 
     constructor(address initialOwner)
@@ -3181,8 +3282,29 @@ contract Educateth is ERC721, Ownable {
         return "https://sapphire-basic-pigeon-114.mypinata.cloud/ipfs/QmbE2wcFqxEfCAbSKtg5BaXRrXiHX1VPFKEuj4dYLNjMeY";
     }
 
-    function safeMint(address to) public onlyOwner {
+    function safeMint(address to, string memory uri) public onlyOwner {
         uint256 tokenId = _nextTokenId++;
         _safeMint(to, tokenId);
+        _setTokenURI(tokenId, uri);
+    }
+
+    // The following functions are overrides required by Solidity.
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        return super.tokenURI(tokenId);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 }
